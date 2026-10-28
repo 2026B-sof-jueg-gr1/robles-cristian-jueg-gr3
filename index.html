@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Operación Supervivencia</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#151b17;color:#edf2e8;font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh}
+main{width:min(96vw,900px);padding:18px 0 24px}header{display:flex;justify-content:space-between;align-items:center;margin:0 4px 12px;gap:12px}
+h1{margin:0;font-size:clamp(1.1rem,3vw,1.8rem);letter-spacing:.06em}header span{font-size:.78rem;letter-spacing:.15em;color:#c4d19b}
+#game{overflow:hidden;border:2px solid #59644b;border-radius:8px;box-shadow:0 18px 50px #0008}canvas{display:block;width:100%!important;height:auto!important}
+.help{color:#c4cbbd;font-size:.9rem;line-height:1.6;margin:12px 4px 0}kbd{background:#303a2c;border:1px solid #657457;border-radius:4px;padding:2px 6px;color:#fff}
+</style></head>
+<body><main>
+<header><h1>OPERACIÓN SUPERVIVENCIA</h1><span>UNIDAD DE CONTENCIÓN</span></header>
+<div id="game"></div>
+<p class="help"><b>Controles:</b> <kbd>W A S D</kbd> o flechas para moverte; apunta con el ratón y haz clic izquierdo para disparar. Elimina zombis, evita el contacto y sobrevive. Pulsa <kbd>ENTER</kbd> para iniciar o volver a jugar.</p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script>
+const W=800,H=600;
+const C={bg:0x252c23,green:0x62724a,light:0xd5d9bd,red:0x9c4538};
+function txt(s,x,y,t,size=20,color='#f1f2e8',origin=.5){return s.add.text(x,y,t,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',color,align:'center'}).setOrigin(origin)}
+class Boot extends Phaser.Scene{
+ constructor(){super('Boot')}
+ create(){
+  let g=this.make.graphics({x:0,y:0,add:false});
+  // Soldado visto desde arriba: casco, uniforme y rifle.
+  g.fillStyle(0x7c8b5a);g.fillRoundedRect(-11,-12,22,25,5);
+  g.fillStyle(0x3e4934);g.fillCircle(0,-9,9);
+  g.fillStyle(0xb8b58b);g.fillCircle(0,-9,5);
+  g.fillStyle(0x242820);g.fillRect(8,-2,17,4);
+  g.fillStyle(0x3d4932);g.fillRect(-13,1,7,13);g.fillRect(6,1,7,13);
+  g.generateTexture('soldier',52,40);
+  g.clear();
+  // Zombi simple y legible desde arriba.
+  // Zombi con silueta humanoide: brazos, torso, cabeza y manchas de ropa.
+  g.fillStyle(0x59674b);g.fillRoundedRect(-9,-2,18,17,4); // torso
+  g.fillStyle(0x6f8460);g.fillRoundedRect(-15,-3,7,16,3); // brazo izquierdo
+  g.fillRoundedRect(8,-3,7,16,3); // brazo derecho
+  g.fillStyle(0x3c4637);g.fillRect(-8,11,6,7);g.fillRect(3,11,6,7); // piernas
+  g.fillStyle(0x82956f);g.fillCircle(0,-9,9); // cabeza
+  g.fillStyle(0x273126);g.fillCircle(-3,-10,2);g.fillCircle(4,-10,2);
+  g.fillStyle(0x8f4a3c);g.fillRect(-3,-5,7,3); // boca
+  g.fillStyle(0x9e5b4d);g.fillCircle(-8,2,2); // herida
+  g.generateTexture('zombie',36,40);
+  g.clear();g.fillStyle(0xffe3a0);g.fillRect(-3,-5,6,10);g.generateTexture('bullet',8,12);g.destroy();
+  this.scene.start('Menu');
+ }}
+class Menu extends Phaser.Scene{
+ constructor(){super('Menu')}
+ create(){
+  drawGround(this);
+  txt(this,W/2,155,'OPERACIÓN SUPERVIVENCIA',34,'#d9e0c0');
+  txt(this,W/2,210,'ZONA DE CONTENCIÓN • SECTOR 04',15,'#d58b72');
+  txt(this,W/2,286,'Tu unidad quedó aislada.',23,'#f1f2e8');
+  txt(this,W/2,322,'Elimina a los infectados y mantente con vida.',16,'#c4cbbd');
+  let b=this.add.rectangle(W/2,410,250,56,0x394831).setStrokeStyle(2,0xc4d19b).setInteractive({useHandCursor:true});
+  txt(this,W/2,410,'INICIAR MISIÓN',19,'#f1f2e8');
+  b.on('pointerover',()=>b.setFillStyle(0x536445));b.on('pointerout',()=>b.setFillStyle(0x394831));
+  b.on('pointerdown',()=>this.scene.start('Game'));this.input.keyboard.once('keydown-ENTER',()=>this.scene.start('Game'));
+  txt(this,W/2,500,'WASD / FLECHAS  •  RATÓN PARA APUNTAR',13,'#aeb8a2');
+ }}
+function drawGround(s){
+ // Ciudad destruida: asfalto gris, edificios derrumbados, escombros y pequeños focos de fuego.
+ s.add.rectangle(W/2,H/2,W,H,0x292b2d);
+ const ground=s.add.graphics();
+
+ // Manchas de ceniza y polvo sobre el asfalto
+ for(let i=0;i<100;i++){
+   const x=Phaser.Math.Between(8,W-8), y=Phaser.Math.Between(8,H-8);
+   ground.fillStyle(Phaser.Utils.Array.GetRandom([0x343638,0x3d3e3e,0x202326,0x494744]),0.75);
+   ground.fillEllipse(x,y,Phaser.Math.Between(8,26),Phaser.Math.Between(4,13));
+ }
+
+ // Calle central de asfalto gastado
+ ground.fillStyle(0x414345,1);
+ ground.fillPoints([
+   new Phaser.Geom.Point(280,0),new Phaser.Geom.Point(520,0),
+   new Phaser.Geom.Point(490,600),new Phaser.Geom.Point(250,600)
+ ],true);
+ ground.lineStyle(3,0x656666,0.7);
+ ground.lineBetween(280,0,250,600); ground.lineBetween(520,0,490,600);
+
+ // Grietas y marcas de la calle
+ ground.lineStyle(2,0x252729,0.95);
+ [[330,70,350,95],[420,140,395,170],[310,260,335,285],[440,360,415,390],
+  [350,460,330,490],[460,520,442,545],[375,200,360,218],[300,390,315,410]]
+  .forEach(a=>ground.lineBetween(a[0],a[1],a[2],a[3]));
+
+ // Líneas de carril desgastadas
+ ground.lineStyle(3,0xb0a77d,0.45);
+ for(let y=30;y<600;y+=95) ground.lineBetween(397,y,393,y+35);
+
+ // Escombros dispersos, evitando cubrir demasiado la zona jugable
+ for(let i=0;i<35;i++){
+   const x=Phaser.Math.Between(15,W-15), y=Phaser.Math.Between(65,H-15);
+   if(x>260&&x<515) continue;
+   ground.fillStyle(Phaser.Utils.Array.GetRandom([0x5b5a57,0x77716a,0x393b3d,0x8a8175]),1);
+   ground.fillPoints([
+     new Phaser.Geom.Point(x-Phaser.Math.Between(3,8),y-4),
+     new Phaser.Geom.Point(x+Phaser.Math.Between(4,10),y-2),
+     new Phaser.Geom.Point(x+5,y+Phaser.Math.Between(3,8)),
+     new Phaser.Geom.Point(x-4,y+5)
+   ],true);
+ }
+
+ // Siluetas de edificios derrumbados en las esquinas y laterales
+ const ruins = [
+   [55,95,95,72],[735,95,95,72],[65,520,110,82],[735,520,105,85],
+   [95,270,55,82],[710,290,62,95]
+ ];
+ ruins.forEach((a,i)=>{
+   s.add.rectangle(a[0]+4,a[1]+5,a[2],a[3],0x17191b,0.65).setDepth(1);
+   const b=s.add.rectangle(a[0],a[1],a[2],a[3],0x4a4947).setStrokeStyle(3,0x68635d).setDepth(1);
+   // bloques rotos y ventanas negras
+   s.add.rectangle(a[0]-a[2]*.18,a[1]-a[3]*.12,a[2]*.22,a[3]*.19,0x202326).setDepth(2);
+   s.add.rectangle(a[0]+a[2]*.2,a[1]+a[3]*.17,a[2]*.18,a[3]*.22,0x252729).setDepth(2);
+   s.add.rectangle(a[0]-a[2]*.28,a[1]+a[3]*.34,a[2]*.14,5,0x77716a).setDepth(2);
+ });
+
+ // Pequeños focos de fuego y brasas anaranjadas en zonas de ruinas
+ [[155,115],[680,115],[120,495],[685,495],[65,320]].forEach((p,i)=>{
+   s.add.circle(p[0],p[1],17,0xe35d32,0.12).setDepth(2);
+   s.add.circle(p[0],p[1],9,0xf07836,0.3).setDepth(2);
+   const flame=s.add.triangle(p[0],p[1]-2,0,-13,-7,5,7,5,0xffa34a,0.9).setDepth(3);
+   s.tweens.add({targets:flame,scaleY:{from:0.8,to:1.15},alpha:{from:0.7,to:1},duration:Phaser.Math.Between(300,550),yoyo:true,repeat:-1});
+ });
+
+ // Charcos oscuros y polvo
+ for(let i=0;i<10;i++){
+   const x=Phaser.Math.Between(25,W-25),y=Phaser.Math.Between(70,H-15);
+   s.add.ellipse(x,y,Phaser.Math.Between(12,28),Phaser.Math.Between(5,11),0x191c1e,0.65).setDepth(1);
+ }
+}
+class Game extends Phaser.Scene{
+ constructor(){super('Game')}
+ create(){
+  drawGround(this);this.score=0;this.lives=3;this.dead=false;this.lastShot=0;
+  // Barricadas/obstáculos del sector.
+  this.obstacles=this.physics.add.staticGroup();
+  [[150,155,88,30],[610,165,100,30],[250,430,108,30],[620,440,88,30]].forEach((a,i)=>{
+   // Barreras de hormigón roto con tonos grises para contrastar con los zombis.
+   this.add.rectangle(a[0]+3,a[1]+4,a[2],a[3],0x17191b,0.5).setDepth(1);
+   let r=this.add.rectangle(a[0],a[1],a[2],a[3],0x686764).setStrokeStyle(2,0x969087);
+   this.add.rectangle(a[0],a[1]-5,a[2]-10,7,0x8a857c).setDepth(2);
+   this.add.rectangle(a[0],a[1]+4,a[2]-8,7,0x4c4b49).setDepth(2);
+   this.physics.add.existing(r,true);this.obstacles.add(r);
+  });
+  this.player=this.physics.add.image(W/2,H/2,'soldier').setCollideWorldBounds(true).setDepth(4);
+  this.player.setDamping(true).setDrag(0.88).setMaxVelocity(220);this.player.body.setSize(24,26);
+  this.zombies=this.physics.add.group();this.bullets=this.physics.add.group({maxSize:45});
+  this.physics.add.overlap(this.bullets,this.zombies,this.hitZombie,null,this);
+  this.physics.add.overlap(this.player,this.zombies,this.hitSoldier,null,this);
+  this.physics.add.collider(this.player,this.obstacles);
+  this.keys=this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
+  this.add.rectangle(W/2,27,W,54,0x171d17,.92).setDepth(10);
+  this.scoreLabel=txt(this,16,26,'ELIMINADOS: 0',16,'#d9e0c0',0).setDepth(11);
+  this.lifeLabel=txt(this,W-16,26,'SALUD: 3',16,'#e2a18b',1).setDepth(11);
+  this.time.addEvent({delay:1250,loop:true,callback:this.spawnZombie,callbackScope:this});
+  this.input.on('pointerdown',p=>{if(p.leftButtonDown())this.shoot(p)});
+  this.input.on('pointermove',p=>{if(p.isDown&&p.leftButtonDown())this.shoot(p)});
+ }
+ spawnZombie(){
+  if(this.dead)return;
+  let side=Phaser.Math.Between(0,3),x,y;
+  if(side===0){x=-15;y=Phaser.Math.Between(65,H)}else if(side===1){x=W+15;y=Phaser.Math.Between(65,H)}else if(side===2){x=Phaser.Math.Between(0,W);y=60}else{x=Phaser.Math.Between(0,W);y=H+15}
+  let z=this.zombies.create(x,y,'zombie');z.setDepth(3);z.setCircle(12);z.setData('speed',Phaser.Math.Between(42,67)+Math.min(this.score,150)*.08);
+ }
+ shoot(p){
+  if(this.dead||this.time.now-this.lastShot<260)return;this.lastShot=this.time.now;
+  let b=this.bullets.get(this.player.x,this.player.y,'bullet');if(!b)return;
+  b.enableBody(true,this.player.x,this.player.y,true,true);b.setActive(true).setVisible(true).setDepth(2);
+  let a=Phaser.Math.Angle.Between(this.player.x,this.player.y,p.worldX,p.worldY);
+  b.setRotation(a+Math.PI/2);this.physics.velocityFromRotation(a,480,b.body.velocity);
+  this.time.delayedCall(1000,()=>{if(b.active){this.bullets.killAndHide(b);b.body.enable=false}});
+ }
+ hitZombie(b,z){
+  if(!b.active||!z.active)return;this.bullets.killAndHide(b);b.body.enable=false;
+  this.zombies.killAndHide(z);z.body.enable=false;this.score++;
+  this.scoreLabel.setText('ELIMINADOS: '+this.score);
+  let puff=this.add.circle(z.x,z.y,4,0xc4d19b,.8).setDepth(5);
+  this.tweens.add({targets:puff,scale:3,alpha:0,duration:160,onComplete:()=>puff.destroy()});
+ }
+ hitSoldier(p,z){
+  if(this.dead||!z.active)return;this.zombies.killAndHide(z);z.body.enable=false;
+  this.lives--;this.lifeLabel.setText('SALUD: '+this.lives);this.cameras.main.shake(120,.005);
+  p.setTint(0xe2a18b);this.time.delayedCall(180,()=>{if(p.active)p.clearTint()});
+  if(this.lives<=0){this.dead=true;this.scene.start('End',{score:this.score})}
+ }
+ update(){
+  if(this.dead)return;let x=0,y=0;
+  if(this.keys.A.isDown||this.keys.LEFT.isDown)x--;if(this.keys.D.isDown||this.keys.RIGHT.isDown)x++;
+  if(this.keys.W.isDown||this.keys.UP.isDown)y--;if(this.keys.S.isDown||this.keys.DOWN.isDown)y++;
+  let v=new Phaser.Math.Vector2(x,y);if(v.length())v.normalize().scale(205);
+  this.player.setAcceleration(v.x*5,v.y*5);
+  this.player.rotation=Phaser.Math.Angle.Between(this.player.x,this.player.y,this.input.activePointer.worldX,this.input.activePointer.worldY)+Math.PI/2;
+  this.zombies.children.iterate(z=>{
+   if(!z||!z.active)return;let a=Phaser.Math.Angle.Between(z.x,z.y,this.player.x,this.player.y);
+   this.physics.velocityFromRotation(a,z.getData('speed'),z.body.velocity);
+   z.rotation=a;
+  });
+  this.bullets.children.iterate(b=>{if(b&&b.active&&(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20)){this.bullets.killAndHide(b);b.body.enable=false}});
+ }
+}
+class End extends Phaser.Scene{
+ constructor(){super('End')}init(d){this.score=d.score||0}
+ create(){
+  drawGround(this);txt(this,W/2,185,'MISIÓN FALLIDA',38,'#d58b72');
+  txt(this,W/2,250,'INFECTADOS ELIMINADOS: '+this.score,22,'#d9e0c0');
+  txt(this,W/2,305,'La zona sigue en cuarentena.',17,'#c4cbbd');
+  let b=this.add.rectangle(W/2,390,260,56,0x394831).setStrokeStyle(2,0xc4d19b).setInteractive({useHandCursor:true});
+  txt(this,W/2,390,'REINTENTAR MISIÓN',18,'#f1f2e8');
+  b.on('pointerover',()=>b.setFillStyle(0x536445));b.on('pointerout',()=>b.setFillStyle(0x394831));
+  b.on('pointerdown',()=>this.scene.start('Game'));this.input.keyboard.once('keydown-ENTER',()=>this.scene.start('Game'));
+  txt(this,W/2,475,'ENTER PARA REINICIAR',13,'#aeb8a2');
+ }}
+new Phaser.Game({type:Phaser.AUTO,width:W,height:H,parent:'game',backgroundColor:'#252c23',
+ physics:{default:'arcade',arcade:{debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Game,End]});
+</script></body></html>
