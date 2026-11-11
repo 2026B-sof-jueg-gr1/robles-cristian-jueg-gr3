@@ -1,219 +1,1112 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Operación Supervivencia</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operación Supervivencia — Protocolo Sector 04</title>
+<meta name="description" content="Un guardia de seguridad, tres puntos de salud y cero relevos. Shooter de supervivencia en el navegador, hecho con Phaser 3. Sin descargas, sin instalar nada.">
+<meta name="author" content="Cristian Robles">
+<meta name="theme-color" content="#0d120e">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Operación Supervivencia — Protocolo Sector 04">
+<meta property="og:description" content="El turno de noche más largo de la historia. Tres puntos de salud, un rifle reglamentario y ningún relevo. Juega gratis en el navegador.">
+<meta property="og:locale" content="es_EC">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230d120e'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23c4d19b' stroke-width='2'/%3E%3Cpath d='M16 2v6M16 24v6M2 16h6M24 16h6' stroke='%23e35d32' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box}body{margin:0;background:#151b17;color:#edf2e8;font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh}
-main{width:min(96vw,900px);padding:18px 0 24px}header{display:flex;justify-content:space-between;align-items:center;margin:0 4px 12px;gap:12px}
-h1{margin:0;font-size:clamp(1.1rem,3vw,1.8rem);letter-spacing:.06em}header span{font-size:.78rem;letter-spacing:.15em;color:#c4d19b}
-#game{overflow:hidden;border:2px solid #59644b;border-radius:8px;box-shadow:0 18px 50px #0008}canvas{display:block;width:100%!important;height:auto!important}
-.help{color:#c4cbbd;font-size:.9rem;line-height:1.6;margin:12px 4px 0}kbd{background:#303a2c;border:1px solid #657457;border-radius:4px;padding:2px 6px;color:#fff}
-</style></head>
-<body><main>
-<header><h1>OPERACIÓN SUPERVIVENCIA</h1><span>UNIDAD DE CONTENCIÓN</span></header>
-<div id="game"></div>
-<p class="help"><b>Controles:</b> <kbd>W A S D</kbd> o flechas para moverte; apunta con el ratón y haz clic izquierdo para disparar. Elimina zombis, evita el contacto y sobrevive. Pulsa <kbd>ENTER</kbd> para iniciar o volver a jugar.</p>
+/* ============================================================
+   OPERACIÓN SUPERVIVENCIA — Terminal de la Unidad de Contención
+   Paleta tomada directamente del juego (verde oliva, ceniza,
+   ámbar y óxido) para que la web y el canvas sean el mismo mundo.
+   ============================================================ */
+:root{
+  --void:#080b09;
+  --bg:#0d120e;
+  --panel:#111a12;
+  --panel-2:#162017;
+  --line:#2a3a29;
+  --line-soft:#1d291d;
+  --olive:#62724a;
+  --sage:#c4d19b;
+  --bone:#edf2e8;
+  --mute:#84937a;
+  --amber:#ffe3a0;
+  --rust:#b8503c;
+  --alert:#e35d32;
+  --mono:'Share Tech Mono',ui-monospace,SFMono-Regular,'Cascadia Mono','Courier New',monospace;
+  --display:'VT323',var(--mono);
+  --pad:clamp(1.25rem,5vw,4.5rem);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:clip}
+body{
+  margin:0;
+  background:
+    radial-gradient(1100px 560px at 50% -12%,#1c2c1d 0%,transparent 62%),
+    radial-gradient(820px 480px at 92% 12%,#2a1c11 0%,transparent 58%),
+    radial-gradient(700px 500px at 4% 62%,#16201a 0%,transparent 60%),
+    var(--void);
+  color:var(--bone);
+  font-family:var(--mono);
+  font-size:16px;
+  line-height:1.7;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+
+/* --- Rejilla técnica de fondo + viñeta de tubo CRT --- */
+body::before{
+  content:"";
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    repeating-linear-gradient(to right,rgba(196,209,155,.045) 0 1px,transparent 1px 72px),
+    repeating-linear-gradient(to bottom,rgba(196,209,155,.045) 0 1px,transparent 1px 72px);
+  mask-image:radial-gradient(ellipse at 50% 30%,#000 20%,transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 30%,#000 20%,transparent 78%);
+}
+.crt{position:fixed;inset:0;z-index:90;pointer-events:none}
+.crt::before{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.34) 0 1px,transparent 1px 3px);
+  opacity:.55;
+  animation:scan 8s linear infinite;
+}
+.crt::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 45%,transparent 48%,rgba(0,0,0,.72) 100%);
+}
+@keyframes scan{from{background-position-y:0}to{background-position-y:3px}}
+
+::selection{background:var(--sage);color:#0d120e}
+a{color:var(--sage);text-decoration:none}
+a:hover{color:var(--amber)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+
+/* ===================== BARRA SUPERIOR ===================== */
+.nav{
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.65rem var(--pad);
+  background:rgba(8,11,9,.82);
+  backdrop-filter:blur(9px);
+  -webkit-backdrop-filter:blur(9px);
+  border-bottom:1px solid var(--line-soft);
+  font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;
+}
+.brand{display:flex;align-items:center;gap:.55rem;color:var(--sage);white-space:nowrap}
+.brand i{
+  width:7px;height:7px;border-radius:50%;background:var(--alert);
+  box-shadow:0 0 10px var(--alert);animation:beat 2.4s ease-in-out infinite;font-style:normal;
+}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.25}}
+.nav nav{display:flex;align-items:center;gap:1.35rem}
+.nav nav a{color:var(--mute);transition:color .18s}
+.nav nav a:hover{color:var(--bone)}
+.nav-play{
+  color:#12080a!important;
+  background:var(--alert);
+  padding:.45rem .9rem;
+  letter-spacing:.22em;
+  border:1px solid #ff8a5c;
+  box-shadow:0 0 18px rgba(227,93,50,.35);
+  transition:transform .18s,box-shadow .18s;
+}
+.nav-play:hover{transform:translateY(-1px);box-shadow:0 0 26px rgba(227,93,50,.6)}
+
+/* ===================== HERO ===================== */
+main{position:relative;z-index:1}
+.hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);
+  gap:clamp(1.5rem,4vw,3.5rem);
+  align-items:center;
+  padding:clamp(2.5rem,7vh,5.5rem) var(--pad) clamp(2.5rem,6vh,4.5rem);
+  max-width:1280px;margin:0 auto;
+}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:.6rem;
+  font-size:.68rem;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--rust);margin:0 0 1.1rem;
+}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--rust)}
+h1{
+  font-family:var(--display);
+  font-weight:400;
+  font-size:clamp(3.4rem,10.5vw,7.2rem);
+  line-height:.82;
+  letter-spacing:.01em;
+  margin:0 0 .35rem;
+  color:var(--bone);
+  text-shadow:0 0 42px rgba(196,209,155,.28),0 0 3px rgba(255,255,255,.55);
+}
+h1 span{display:block}
+h1 .dim{color:var(--sage);opacity:.92}
+.subtitle{
+  font-size:.74rem;letter-spacing:.42em;text-transform:uppercase;
+  color:var(--mute);margin:0 0 1.6rem;
+}
+.logline{
+  font-size:clamp(1rem,1.6vw,1.18rem);
+  line-height:1.62;
+  color:#cfd8c4;
+  max-width:44ch;
+  margin:0 0 2rem;
+  border-left:2px solid var(--line);
+  padding-left:1.1rem;
+}
+.logline b{color:var(--amber);font-weight:400}
+
+/* --- Botón gigante --- */
+.play{
+  position:relative;
+  display:inline-flex;align-items:center;gap:1rem;
+  padding:1.15rem 2.6rem 1.15rem 2.2rem;
+  font-family:var(--display);
+  font-size:clamp(1.7rem,3.6vw,2.5rem);
+  letter-spacing:.14em;
+  color:#150a05;
+  background:linear-gradient(178deg,#ff7a45 0%,#e35d32 42%,#a33a22 100%);
+  border:2px solid #ffb489;
+  border-radius:3px;
+  box-shadow:
+    0 0 0 6px rgba(227,93,50,.09),
+    0 0 0 7px rgba(227,93,50,.18),
+    0 16px 44px rgba(227,93,50,.32),
+    inset 0 2px 0 rgba(255,255,255,.4),
+    inset 0 -3px 0 rgba(0,0,0,.28);
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .22s ease,filter .22s;
+  isolation:isolate;
+}
+.play::after{
+  content:"";
+  position:absolute;inset:-2px;z-index:-1;border-radius:3px;
+  background:linear-gradient(178deg,#ff7a45,#e35d32);
+  filter:blur(22px);opacity:.45;
+  animation:pulse 2.6s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.7;transform:scale(1.035)}}
+.play:hover{transform:translateY(-3px) scale(1.015);filter:brightness(1.07);color:#150a05}
+.play:active{transform:translateY(0) scale(.995)}
+.play .arrow{font-family:var(--mono);font-size:.9em;transform:translateY(-1px)}
+.play-note{
+  display:block;margin-top:1.1rem;
+  font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);
+}
+.play-note b{color:var(--sage);font-weight:400}
+
+/* --- Panel terminal --- */
+.term{
+  background:linear-gradient(180deg,#0a100b,#0e150f 60%,#0b110c);
+  border:1px solid var(--line);
+  box-shadow:inset 0 0 70px rgba(98,114,74,.09),0 24px 60px rgba(0,0,0,.6);
+  position:relative;
+  overflow:hidden;
+}
+.term::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 42%,rgba(196,209,155,.05) 50%,transparent 58%);
+  animation:sheen 7s linear infinite;
+}
+@keyframes sheen{from{transform:translateX(-120%)}to{transform:translateX(120%)}}
+.term-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.55rem .85rem;
+  border-bottom:1px solid var(--line-soft);
+  background:#080d09;
+  font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:var(--mute);
+}
+.dots{display:flex;gap:5px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#2c3a2a;display:block}
+.dots i:first-child{background:var(--rust)}
+.dots i:nth-child(2){background:#7a6a2e}
+.dots i:nth-child(3){background:var(--olive)}
+.term-body{
+  padding:1.1rem 1.15rem 1.4rem;
+  font-size:clamp(.7rem,1.05vw,.8rem);
+  line-height:1.95;
+  min-height:clamp(280px,38vh,340px);
+  color:#a9bb96;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.term-body .ok{color:var(--sage)}
+.term-body .bad{color:var(--alert)}
+.term-body .warn{color:var(--amber)}
+.term-body .lead{color:#7d8f72}
+.cursor{
+  display:inline-block;width:.62em;height:1.05em;
+  background:var(--sage);vertical-align:-.18em;
+  animation:blink 1.05s steps(1) infinite;
+}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+/* ===================== CINTA DE PELIGRO ===================== */
+.tape{
+  height:12px;
+  background:repeating-linear-gradient(45deg,rgba(227,93,50,.5) 0 9px,transparent 9px 18px);
+  border-top:1px solid rgba(227,93,50,.16);
+  border-bottom:1px solid rgba(227,93,50,.16);
+  opacity:.3;
+}
+
+/* ===================== SECCIONES ===================== */
+section.block{
+  padding:clamp(3rem,8vh,5.5rem) var(--pad);
+  max-width:1180px;margin:0 auto;
+  scroll-margin-top:64px;
+}
+.sec-head{
+  display:flex;align-items:baseline;gap:1.1rem;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);
+  padding-bottom:.85rem;margin-bottom:2.6rem;
+}
+.sec-num{
+  font-size:.68rem;letter-spacing:.34em;color:var(--rust);
+  border:1px solid rgba(184,80,60,.4);padding:.2rem .55rem;
+}
+.sec-head h2{
+  font-family:var(--display);font-weight:400;
+  font-size:clamp(1.85rem,4.6vw,3rem);line-height:1;
+  margin:0;letter-spacing:.03em;color:var(--bone);
+}
+.sec-head p{margin:0;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
+
+h3{
+  font-family:var(--display);font-weight:400;
+  font-size:clamp(1.2rem,2.4vw,1.65rem);
+  letter-spacing:.06em;margin:0 0 .8rem;color:var(--sage);
+}
+p{margin:0 0 1.1rem;color:#c2cdb8}
+p.lead{font-size:clamp(1rem,1.5vw,1.12rem);color:#d5dfcc;line-height:1.75}
+p.lead b{color:var(--bone);font-weight:400}
+
+/* --- Cita / logline destacado --- */
+.quote{
+  border:1px solid var(--line);
+  border-left:3px solid var(--alert);
+  background:linear-gradient(90deg,rgba(227,93,50,.07),transparent 70%);
+  padding:clamp(1.2rem,3vw,2rem);
+  margin:0 0 2.4rem;
+  position:relative;
+}
+.quote::before{
+  content:"LOGLINE";
+  position:absolute;top:-.62rem;left:1.2rem;
+  background:var(--bg);padding:0 .5rem;
+  font-size:.6rem;letter-spacing:.34em;color:var(--rust);
+}
+.quote p{
+  font-family:var(--display);
+  font-size:clamp(1.25rem,2.9vw,1.95rem);
+  line-height:1.32;
+  color:var(--bone);margin:0;
+}
+.quote p em{color:var(--amber);font-style:normal}
+
+.two-col{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:clamp(1.5rem,4vw,3rem);
+}
+.two-col p b{color:var(--bone);font-weight:400}
+
+/* --- Diagrama del bucle de juego --- */
+.loop{
+  list-style:none;margin:2rem 0 0;padding:0;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;
+}
+.loop li{
+  border:1px solid var(--line);
+  background:var(--panel);
+  padding:.9rem .85rem;
+  position:relative;
+  transition:border-color .2s,background .2s,transform .2s;
+}
+.loop li:hover{border-color:var(--olive);background:var(--panel-2);transform:translateY(-2px)}
+.loop li::after{
+  content:"▸";position:absolute;right:-.78rem;top:50%;transform:translateY(-50%);
+  color:var(--rust);font-size:.95rem;z-index:2;
+}
+.loop li:last-child::after{content:"↺";color:var(--sage)}
+.loop-n{display:block;font-size:.6rem;letter-spacing:.28em;color:var(--rust);margin-bottom:.35rem}
+.loop strong{display:block;font-family:var(--display);font-size:1.12rem;letter-spacing:.1em;color:var(--bone);font-weight:400}
+.loop em{display:block;font-size:.66rem;color:var(--mute);font-style:normal;line-height:1.5;margin-top:.2rem}
+
+/* --- Rejilla de características --- */
+.features{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);
+}
+.card{
+  background:var(--panel);
+  padding:clamp(1.2rem,2.6vw,1.9rem);
+  position:relative;
+  transition:background .22s;
+}
+.card:hover{background:var(--panel-2)}
+.card .k{
+  font-family:var(--display);font-size:2rem;line-height:1;
+  color:#2f4030;display:block;margin-bottom:.7rem;
+  transition:color .22s;
+}
+.card:hover .k{color:var(--rust)}
+.card h4{
+  margin:0 0 .55rem;font-size:.8rem;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--sage);font-weight:400;
+}
+.card p{margin:0;font-size:.85rem;line-height:1.65;color:#a8b6a0}
+
+/* --- Legal --- */
+.legal-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:1.25rem;margin-bottom:1.5rem;
+}
+.rating{
+  border:1px solid var(--line);
+  background:var(--panel);
+  padding:1.4rem;
+  display:flex;gap:1.2rem;align-items:flex-start;
+}
+.badge{
+  flex:0 0 auto;width:72px;height:94px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  font-family:Arial,Helvetica,sans-serif;
+  border-radius:2px;
+}
+.badge-esrb{background:#fff;border:3px solid #000;color:#000}
+.badge-esrb b{font-size:1.32rem;line-height:1;font-weight:900;letter-spacing:-.02em}
+.badge-esrb small{font-size:.4rem;line-height:1.25;letter-spacing:.03em;font-weight:700;max-width:56px;text-align:center}
+.badge-pegi{background:#2f8f47;border:3px solid #f2f2f2;color:#fff}
+.badge-pegi b{font-size:2.1rem;line-height:.9;font-weight:900}
+.badge-pegi small{font-size:.5rem;letter-spacing:.16em;font-weight:700}
+.rating h4{margin:.15rem 0 .5rem;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--rust);font-weight:400}
+.rating p{font-size:.85rem;line-height:1.65;margin:0 0 .5rem;color:#b3c0aa}
+.rating p b{color:var(--bone);font-weight:400}
+.rating .fine{font-size:.68rem;color:#6f7e67;line-height:1.55;margin:0;letter-spacing:.02em}
+
+.fineprint{
+  border:1px dashed var(--line);
+  padding:1.1rem 1.25rem;
+  font-size:.74rem;line-height:1.7;color:#8d9c83;
+  margin:0 0 2.4rem;
+}
+.fineprint b{color:var(--sage);font-weight:400}
+
+.ethics{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:1rem;margin-top:1.5rem;
+}
+.ethic{border-left:2px solid var(--olive);padding:.15rem 0 .15rem 1rem}
+.ethic strong{display:block;font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;color:var(--sage);font-weight:400;margin-bottom:.3rem}
+.ethic span{font-size:.82rem;color:#9fae96;line-height:1.6}
+
+/* --- Muro de honor / tabla --- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:560px}
+thead th{
+  text-align:left;padding:.85rem 1.1rem;
+  font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--mute);font-weight:400;
+  background:#0b110c;border-bottom:1px solid var(--line);
+}
+tbody td{padding:.9rem 1.1rem;border-bottom:1px solid var(--line-soft);color:#b6c3ad;vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:#141d15}
+td.work{color:var(--bone)}
+td.lic{color:var(--sage);white-space:nowrap}
+td.lic.mit{color:var(--amber)}
+caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* --- Pipeline --- */
+.pipe{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1.05rem;
+  margin:0 0 2rem;
+}
+.pipe div{
+  border:1px solid var(--line);background:var(--panel);
+  padding:1rem .9rem;text-align:center;position:relative;
+}
+.pipe div::after{
+  content:"›";position:absolute;right:-.86rem;top:50%;transform:translateY(-50%);
+  color:var(--rust);font-size:1.3rem;line-height:1;z-index:2;
+}
+.pipe div:last-child::after{content:""}
+.pipe small{display:block;font-size:.58rem;letter-spacing:.26em;color:var(--mute);margin-bottom:.35rem}
+.pipe b{font-family:var(--display);font-size:1.05rem;letter-spacing:.1em;color:var(--sage);font-weight:400}
+
+.code{
+  border:1px solid var(--line);
+  background:#080d09;
+  overflow:hidden;
+  margin:0 0 1.5rem;
+}
+.code-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.5rem .85rem;background:#0b110c;border-bottom:1px solid var(--line-soft);
+  font-size:.64rem;letter-spacing:.2em;color:var(--mute);
+}
+.code-bar button{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;
+  background:transparent;border:1px solid var(--line);color:var(--sage);
+  padding:.3rem .6rem;cursor:pointer;transition:all .18s;
+}
+.code-bar button:hover{background:var(--sage);color:#0d120e;border-color:var(--sage)}
+.code pre{
+  margin:0;padding:1.1rem 1.15rem;overflow-x:auto;
+  font-family:var(--mono);font-size:.74rem;line-height:1.8;
+  color:#a9bb96;tab-size:2;
+}
+.code .c{color:#5d6d57}
+.code .k{color:var(--amber)}
+.code .s{color:#9ec9a0}
+.code .v{color:#e08a6a}
+
+.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:.85rem}
+.steps li{
+  counter-increment:s;
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:.95rem;align-items:start;
+  font-size:.86rem;color:#b3c0aa;
+}
+.steps li::before{
+  content:counter(s,decimal-leading-zero);
+  font-family:var(--display);font-size:1.15rem;color:var(--rust);
+  border:1px solid rgba(184,80,60,.35);width:2rem;height:2rem;
+  display:grid;place-items:center;line-height:1;
+}
+.steps b{color:var(--bone);font-weight:400}
+.steps code{
+  background:#162017;border:1px solid var(--line);padding:.08rem .35rem;
+  font-size:.82em;color:var(--amber);
+  white-space:normal;overflow-wrap:anywhere;
+}
+
+/* --- Cierre --- */
+.final{
+  text-align:center;
+  padding:clamp(3rem,9vh,6rem) var(--pad) clamp(3.5rem,10vh,7rem);
+  border-top:1px solid var(--line-soft);
+  background:radial-gradient(600px 260px at 50% 0%,rgba(227,93,50,.1),transparent 70%);
+}
+.final h2{
+  font-family:var(--display);font-weight:400;
+  font-size:clamp(2rem,6vw,3.6rem);line-height:1;margin:0 0 1rem;color:var(--bone);
+}
+.final p{max-width:52ch;margin:0 auto 2rem;color:#a8b6a0}
+
+footer{
+  border-top:1px solid var(--line-soft);
+  padding:2rem var(--pad) 2.6rem;
+  display:flex;flex-wrap:wrap;gap:1rem 2rem;align-items:center;justify-content:space-between;
+  font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#6f7e67;
+}
+footer nav{display:flex;flex-wrap:wrap;gap:1.2rem}
+footer a{color:#8d9c83}
+footer a:hover{color:var(--amber)}
+
+/* --- Revelado al hacer scroll --- */
+.rv{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+.rv.in{opacity:1;transform:none}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width:980px){
+  .features{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .features{grid-template-columns:1fr}
+}
+@media (max-width:920px){
+  .hero{grid-template-columns:1fr;gap:2rem}
+  .term{order:2}
+  .term-body{min-height:270px;font-size:.72rem}
+  .loop{grid-template-columns:repeat(2,1fr);gap:.9rem .7rem}
+  .loop li::after{content:"▾";right:50%;top:auto;bottom:-.78rem;transform:translateX(50%)}
+  .loop li:last-child::after{content:"↺"}
+  .pipe{grid-template-columns:repeat(2,1fr);gap:.7rem}
+  .pipe div::after{content:"›"}
+}
+@media (max-width:720px){
+  .nav nav a:not(.nav-play){display:none}
+  .brand span{font-size:.6rem;letter-spacing:.1em}
+  .loop{grid-template-columns:1fr}
+  .loop li::after{content:"▾";right:50%;bottom:-.78rem;top:auto;transform:translateX(50%)}
+  .loop li:last-child::after{content:"↺"}
+  .rating{flex-direction:column;gap:1rem}
+  .badge{width:64px;height:84px}
+  .badge-esrb b{font-size:1.12rem}
+  .badge-pegi b{font-size:1.85rem}
+  .play{width:100%;justify-content:center}
+
+  /* Tabla de créditos → fichas apiladas */
+  .table-wrap{border:0;background:transparent;overflow:visible}
+  table{min-width:0;font-size:.82rem}
+  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  tbody tr{
+    display:block;border:1px solid var(--line);background:var(--panel);
+    margin-bottom:.7rem;padding:.55rem 1rem .75rem;
+  }
+  tbody tr:last-child{margin-bottom:0}
+  tbody td{
+    display:block;border:0;padding:.4rem 0;
+    background:none!important;
+  }
+  tbody td::before{
+    content:attr(data-label);display:block;
+    font-size:.56rem;letter-spacing:.24em;text-transform:uppercase;
+    color:#6f7e67;margin-bottom:.1rem;
+  }
+  td.work{font-size:.95rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+  .rv{opacity:1;transform:none}
+  .crt::before{opacity:.3}
+}
+</style>
+<noscript><style>.rv{opacity:1!important;transform:none!important}</style></noscript>
+</head>
+<body>
+<div class="crt" aria-hidden="true"></div>
+
+<!-- ===================== BARRA ===================== -->
+<header class="nav">
+  <a class="brand" href="#top"><i></i><span>Unidad de Contención</span></a>
+  <nav aria-label="Secciones">
+    <a href="#alma">01 Alma</a>
+    <a href="#juego">02 Juego</a>
+    <a href="#legal">03 Legal</a>
+    <a href="#creditos">04 Créditos</a>
+    <a href="#pipeline">05 CI/CD</a>
+    <a class="nav-play" href="operacion_supervivencia/">Jugar ▸</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Terminal 04 · Cuarentena activa</p>
+      <h1><span>Operación</span><span class="dim">Supervivencia</span></h1>
+      <p class="subtitle">Protocolo Sector 04</p>
+      <p class="logline">
+        Un guardia de seguridad, un rifle reglamentario y <b>tres puntos de salud</b>.
+        El cambio de turno está a punto de llegar. El cambio de turno <b>no va a llegar</b>.
+      </p>
+      <a class="play" href="operacion_supervivencia/">
+        JUGAR <span class="arrow">▶</span>
+      </a>
+      <span class="play-note">Se juega en el navegador · <b>Sin descargas</b> · WASD + ratón</span>
+    </div>
+
+    <div class="term" role="img" aria-label="Registro de arranque de la terminal de contención">
+      <div class="term-bar">
+        <span>contencion://sector-04</span>
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+      <div class="term-body" id="boot"></div>
+    </div>
+  </section>
+
+  <div class="tape" aria-hidden="true"></div>
+
+  <!-- ===================== 01 · EL ALMA ===================== -->
+  <section class="block" id="alma">
+    <div class="sec-head rv">
+      <span class="sec-num">01</span>
+      <h2>El Alma del Juego</h2>
+      <p>Narrativa y propósito</p>
+    </div>
+
+    <blockquote class="quote rv">
+      <p>
+        El turno de noche más largo de la historia: un operador de contención, armado con un rifle
+        reglamentario y tres latidos de salud, debe sostener el Sector 04 hasta que llegue el relevo.
+        <em>El relevo no existe.</em>
+      </p>
+    </blockquote>
+
+    <div class="two-col">
+      <div class="rv">
+        <h3>Por qué esto no es un castigo</h3>
+        <p class="lead">
+          Aprender duele cuando te obligan. Aquí nadie te obliga: aquí <b>quieres</b> saber qué pasa
+          si aguantas una oleada más.
+        </p>
+        <p>
+          El juego no promete recompensas, promete información. Cada partida te dice exactamente lo
+          mismo: dónde estabas, cuántos eliminaste y en qué segundo fallaste. No hay cinemáticas que
+          saltar ni tutoriales que leer. La única forma de mejorar es volver a entrar.
+        </p>
+        <p>
+          Eso es lo contrario de un castigo. Un castigo te quita algo; este juego te devuelve el
+          control en menos de un segundo. Mueres, ves el número y vuelves a empezar. El fracaso
+          cuesta cero y enseña muchísimo.
+        </p>
+      </div>
+
+      <div class="rv">
+        <h3>Resonancia ludonarrativa</h3>
+        <p class="lead">
+          La mecánica principal no ilustra la historia: <b>es</b> la historia.
+        </p>
+        <p>
+          Tres puntos de salud, sin botiquines, sin escudos, sin puntos de guardado. Ese único número
+          convierte cada decisión en una decisión real: no puedes acorralar zombis contra la esquina
+          porque no tienes margen para el error. El juego te obliga a <b>leer el espacio antes de
+          moverte</b>, que es exactamente lo que enseña.
+        </p>
+        <p>
+          Y lo que enseña no se puede memorizar. Se llama aprendizaje procedimental: priorizar
+          amenazas, gestionar un recurso escaso y decidir con información incompleta. Ningún PDF
+          enseña eso. Solo se aprende jugando, fallando y repitiendo — el mismo bucle con el que se
+          escribe software.
+        </p>
+      </div>
+    </div>
+
+    <ol class="loop rv" aria-label="Bucle de juego">
+      <li><span class="loop-n">PASO 01</span><strong>OBSERVAR</strong><em>¿por dónde entran?</em></li>
+      <li><span class="loop-n">PASO 02</span><strong>DECIDIR</strong><em>¿hacia dónde me muevo?</em></li>
+      <li><span class="loop-n">PASO 03</span><strong>DISPARAR</strong><em>260 ms de cadencia</em></li>
+      <li><span class="loop-n">PASO 04</span><strong>EVALUAR</strong><em>¿qué aprendí de esto?</em></li>
+    </ol>
+    <p class="rv" style="margin-top:1.2rem;font-size:.8rem;color:#7d8f72;letter-spacing:.04em">
+      ↑ El mismo bucle del desarrollo de software: leer, diseñar, ejecutar, medir. La única diferencia
+      es que aquí el <i>bug</i> te muerde.
+    </p>
+  </section>
+
+  <div class="tape" aria-hidden="true"></div>
+
+  <!-- ===================== 02 · EL JUEGO ===================== -->
+  <section class="block" id="juego">
+    <div class="sec-head rv">
+      <span class="sec-num">02</span>
+      <h2>El Escaparate</h2>
+      <p>Qué vas a encontrar</p>
+    </div>
+
+    <div class="features rv">
+      <article class="card">
+        <span class="k">03</span>
+        <h4>Tres latidos</h4>
+        <p>Tres puntos de salud. Sin botiquines, sin escudos, sin segunda oportunidad. El juego te dice cuánto margen tienes y tú decides qué hacer con él.</p>
+      </article>
+      <article class="card">
+        <span class="k">∞</span>
+        <h4>Oleadas sin guion</h4>
+        <p>Los infectados aparecen por los cuatro bordes y aceleran a medida que sube tu contador. No hay final: hay un récord personal esperando.</p>
+      </article>
+      <article class="card">
+        <span class="k">260</span>
+        <h4>Puntería real</h4>
+        <p>Apuntas con el ratón, disparas con clic izquierdo y hay 260 ms entre disparos. La cadencia es una regla del mundo, no un botón de pánico.</p>
+      </article>
+      <article class="card">
+        <span class="k">06</span>
+        <h4>Ciudad muerta</h4>
+        <p>Asfalto agrietado, escombros, barricadas de hormigón y seis edificios derrumbados. Todo dibujado por código, polígono a polígono, sin una sola imagen externa.</p>
+      </article>
+      <article class="card">
+        <span class="k">0 MB</span>
+        <h4>Cero descargas</h4>
+        <p>800×600, Phaser 3 y una pestaña del navegador. Entras desde el móvil, desde el aula o desde el portátil prestado de tu primo.</p>
+      </article>
+      <article class="card">
+        <span class="k">01</span>
+        <h4>Una sola regla</h4>
+        <p>Sobrevive. No hay historia que desbloquear ni diálogos que saltar. Solo tú, el ratón y lo que viene por la izquierda.</p>
+      </article>
+    </div>
+
+    <div class="two-col" style="margin-top:2.6rem">
+      <div class="rv">
+        <h3>Cómo se juega</h3>
+        <p><b>W A S D</b> o flechas para moverte. Ratón para apuntar. Clic izquierdo para disparar. <b>ENTER</b> para iniciar o reintentar.</p>
+        <p style="font-size:.86rem;color:#8d9c83">Funciona con teclado y ratón. En móvil o tablet el juego carga, pero está diseñado para escritorio.</p>
+      </div>
+      <div class="rv">
+        <h3>Qué hay debajo</h3>
+        <p>Phaser 3 con física Arcade, cuatro escenas (Boot, Menu, Game, End) y un generador de texturas que dibuja al soldado y a los zombis en tiempo de ejecución.</p>
+        <p style="font-size:.86rem;color:#8d9c83">Sin sprites, sin atlas, sin assets: todo el arte nace de la API Graphics de Phaser.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="tape" aria-hidden="true"></div>
+
+  <!-- ===================== 03 · LEGAL ===================== -->
+  <section class="block" id="legal">
+    <div class="sec-head rv">
+      <span class="sec-num">03</span>
+      <h2>Las Reglas del Mundo Real</h2>
+      <p>Legal y ético</p>
+    </div>
+
+    <div class="legal-grid rv">
+      <div class="rating">
+        <div class="badge badge-esrb" aria-hidden="true">
+          <b>E10+</b>
+          <small>EVERYONE 10+</small>
+        </div>
+        <div>
+          <h4>ESRB · Clasificación creativa</h4>
+          <p>
+            <b>E10+ — Apto para todo humano con pulso.</b> Contiene violencia de dibujos animados
+            dirigida exclusivamente a polígonos que ya estaban muertos antes de empezar. Los enemigos
+            se disuelven en un destello de luz: cero sangre, cero cuerpos, cero lenguaje soez.
+          </p>
+          <p class="fine">Representación satírica con fines académicos. No es una certificación oficial de la ESRB.</p>
+        </div>
+      </div>
+
+      <div class="rating">
+        <div class="badge badge-pegi" aria-hidden="true">
+          <small>PEGI</small>
+          <b>7</b>
+        </div>
+        <div>
+          <h4>PEGI · Clasificación creativa</h4>
+          <p>
+            <b>PEGI 7 — Violencia no realista.</b> Los infectados son formas geométricas con muy
+            malas intenciones. Los polígonos no sangran, no gritan y no dejan indemnización.
+          </p>
+          <p class="fine">Representación satírica con fines académicos. No es una certificación oficial de PEGI.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fineprint rv">
+      <b>Letra pequeña honesta.</b> Estas clasificaciones son un ejercicio creativo del taller, no un
+      trámite de distribución comercial. Si el juego llegara a publicarse en una tienda real, la
+      clasificación la emitiría el organismo correspondiente (ESRB, PEGI o IARC) y no este párrafo.
+      Mientras tanto: el juego no contiene compras, apuestas, monedas, anuncios, ni mecanismos de
+      presión para gastar dinero.
+    </div>
+
+    <h3 class="rv">Derechos, deberes y cero letra chica</h3>
+    <div class="ethics rv">
+      <div class="ethic">
+        <strong>Código abierto</strong>
+        <span>Todo el proyecto se publica bajo licencia MIT. Puedes leerlo, copiarlo, modificarlo y publicarlo, citando la autoría original.</span>
+      </div>
+      <div class="ethic">
+        <strong>Sin datos personales</strong>
+        <span>La web no tiene cookies, ni analítica, ni formularios, ni rastreadores de terceros. No se recoge ni un solo dato de quien juega.</span>
+      </div>
+      <div class="ethic">
+        <strong>Sin monetización</strong>
+        <span>No hay anuncios, ni cajas de botín, ni pases de temporada, ni correos que capturar. El juego es gratis y así se queda.</span>
+      </div>
+      <div class="ethic">
+        <strong>Contenido responsable</strong>
+        <span>La violencia es abstracta y geométrica. No hay representación de personas reales, ni gore, ni apología de nada.</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="tape" aria-hidden="true"></div>
+
+  <!-- ===================== 04 · MURO DE HONOR ===================== -->
+  <section class="block" id="creditos">
+    <div class="sec-head rv">
+      <span class="sec-num">04</span>
+      <h2>Muro de Honor</h2>
+      <p>Todo lo que no escribimos nosotros</p>
+    </div>
+
+    <p class="lead rv" style="max-width:62ch">
+      Un juego honesto dice de dónde viene todo. Este no usa ni una sola imagen ni un solo archivo de
+      audio de terceros: el arte se genera por código en tiempo de ejecución. Aun así, aquí está el
+      registro completo de las obras libres que lo hacen posible.
+    </p>
+
+    <div class="table-wrap rv">
+      <table>
+        <caption>Créditos y licencias de terceros</caption>
+        <thead>
+          <tr>
+            <th scope="col">Obra</th>
+            <th scope="col">Autoría</th>
+            <th scope="col">Licencia</th>
+            <th scope="col">Uso</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="work" data-label="Obra">Phaser 3.80.1</td>
+            <td data-label="Autoría">Photon Storm</td>
+            <td class="lic mit" data-label="Licencia">MIT</td>
+            <td data-label="Uso">Motor de juego, física Arcade, generación de texturas</td>
+          </tr>
+          <tr>
+            <td class="work" data-label="Obra">Share Tech Mono</td>
+            <td data-label="Autoría">Carrois Apostrophe</td>
+            <td class="lic" data-label="Licencia">SIL OFL 1.1</td>
+            <td data-label="Uso">Tipografía de la terminal en esta web</td>
+          </tr>
+          <tr>
+            <td class="work" data-label="Obra">VT323</td>
+            <td data-label="Autoría">Peter Hull</td>
+            <td class="lic" data-label="Licencia">SIL OFL 1.1</td>
+            <td data-label="Uso">Tipografía de titulares y HUD de esta web</td>
+          </tr>
+          <tr>
+            <td class="work" data-label="Obra">Soldado, zombis, balas, escenario</td>
+            <td data-label="Autoría">Generado con la API Graphics de Phaser</td>
+            <td class="lic" data-label="Licencia">MIT</td>
+            <td data-label="Uso">100 % del arte del juego. Cero archivos externos.</td>
+          </tr>
+          <tr>
+            <td class="work" data-label="Obra">Diseño, código y narrativa</td>
+            <td data-label="Autoría">Cristian Robles</td>
+            <td class="lic" data-label="Licencia">MIT</td>
+            <td data-label="Uso">Juego, web y tubería de despliegue</td>
+          </tr>
+          <tr>
+            <td class="work" data-label="Obra">Sonido</td>
+            <td data-label="Autoría">Nadie. El juego es mudo por diseño.</td>
+            <td class="lic" data-label="Licencia">—</td>
+            <td data-label="Uso">Sin pistas, sin efectos, sin licencias que perseguir</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="rv" style="margin-top:1.2rem;font-size:.76rem;color:#7d8f72;line-height:1.7">
+      <b style="color:var(--sage);font-weight:400">Compromiso de crédito:</b> si en el futuro se
+      incorpora arte, música o efectos de terceros, se registrarán en esta misma tabla —con autoría,
+      licencia y enlace— <i>antes</i> de publicarse. Las licencias CC0 y Creative Commons no son
+      terraplenes: son contratos.
+    </p>
+  </section>
+
+  <div class="tape" aria-hidden="true"></div>
+
+  <!-- ===================== 05 · CI/CD ===================== -->
+  <section class="block" id="pipeline">
+    <div class="sec-head rv">
+      <span class="sec-num">05</span>
+      <h2>Magia Negra de Software</h2>
+      <p>Despliegue automático</p>
+    </div>
+
+    <p class="lead rv" style="max-width:62ch">
+      Subir el juego a mano cada vez que se corrige una coma es un impuesto que se paga con tiempo de
+      vida. Este repositorio tiene un robot: cada <code style="color:var(--amber)">push</code> a
+      <code style="color:var(--amber)">main</code> empaqueta el juego y lo publica en itch.io sin
+      abrir el navegador.
+    </p>
+
+    <div class="pipe rv" aria-label="Tubería de despliegue">
+      <div><small>DISPARADOR</small><b>git push</b></div>
+      <div><small>ENTORNO</small><b>GitHub Actions</b></div>
+      <div><small>TRANSPORTE</small><b>Butler CLI</b></div>
+      <div><small>DESTINO</small><b>itch.io</b></div>
+    </div>
+
+    <div class="code rv">
+      <div class="code-bar">
+        <span>.github/workflows/publish-itch.yml</span>
+        <button type="button" data-copy="yml-src">Copiar</button>
+      </div>
+<pre id="yml-src"><span class="c"># Cada push a main publica el juego en itch.io con Butler.</span>
+<span class="k">name</span>: <span class="s">Publicar en itch.io</span>
+
+<span class="k">on</span>:
+  <span class="k">push</span>:
+    <span class="k">branches</span>: <span class="s">[main]</span>
+    <span class="k">paths</span>:
+      - <span class="s">'operacion_supervivencia/**'</span>
+      - <span class="s">'.github/workflows/publish-itch.yml'</span>
+  <span class="k">workflow_dispatch</span>:
+
+<span class="k">jobs</span>:
+  <span class="k">publicar</span>:
+    <span class="k">runs-on</span>: <span class="s">ubuntu-latest</span>
+    <span class="k">steps</span>:
+      - <span class="k">uses</span>: <span class="s">actions/checkout@v4</span>
+
+      - <span class="k">name</span>: <span class="s">Empaquetar el juego</span>
+        <span class="k">run</span>: |
+          cd operacion_supervivencia
+          zip -r ../build.zip . -x '*.md'
+
+      - <span class="k">name</span>: <span class="s">Subir a itch.io</span>
+        <span class="k">uses</span>: <span class="s">josephbmanley/butler-publish-itchio-action@master</span>
+        <span class="k">env</span>:
+          <span class="k">BUTLER_CREDENTIALS</span>: <span class="v">${{ secrets.BUTLER_CREDENTIALS }}</span>
+          <span class="k">CHANNEL</span>: <span class="s">html</span>
+          <span class="k">ITCH_USER</span>: <span class="v">${{ secrets.ITCH_USER }}</span>
+          <span class="k">ITCH_GAME</span>: <span class="v">${{ secrets.ITCH_GAME }}</span>
+          <span class="k">PACKAGE</span>: <span class="s">build.zip</span>
+          <span class="k">VERSION</span>: <span class="v">${{ github.run_number }}</span></pre>
+    </div>
+
+    <p class="rv" style="margin:-.6rem 0 1.8rem;font-size:.74rem;color:#7d8f72">
+      Versión esencial. El archivo real del repositorio añade un paso de comprobación para terminar
+      en verde mientras los secretos todavía no existen.
+    </p>
+
+    <ol class="steps rv">
+      <li><span><b>Genera la clave.</b> Instala Butler y ejecuta <code>butler login</code>. La API key queda en <code>~/.config/itch/butler_creds</code>; ese contenido es el secreto.</span></li>
+      <li><span><b>Guarda el secreto.</b> En GitHub: <code>Settings → Secrets and variables → Actions → New repository secret</code>, con el nombre <code>BUTLER_CREDENTIALS</code>.</span></li>
+      <li><span><b>Publica la primera vez a mano.</b> Butler necesita que la página del juego exista en itch.io antes de aceptar un <code>push</code>.</span></li>
+      <li><span><b>Haz push y olvídate.</b> A partir de ahí, cada commit dispara el robot. El número de ejecución se usa como versión, así que siempre sabes qué build está en línea.</span></li>
+    </ol>
+
+    <p class="rv" style="margin-top:1.6rem;font-size:.76rem;color:#7d8f72">
+      ¿Prefieres el camino manual? Está documentado paso a paso en el
+      <a href="https://github.com/2026B-sof-jueg-gr1/robles-cristian-jueg-gr3#readme">README del repositorio</a>.
+    </p>
+  </section>
+
+  <!-- ===================== CIERRE ===================== -->
+  <section class="final">
+    <h2>El turno empieza ahora</h2>
+    <p>Tres puntos de salud. Una ciudad en ruinas. Nadie viene a relevarte.</p>
+    <a class="play" href="operacion_supervivencia/">JUGAR <span class="arrow">▶</span></a>
+    <span class="play-note">Gratis · En el navegador · <b>Sin instalar nada</b></span>
+  </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+<footer>
+  <span>© <span id="year">2026</span> Cristian Robles · Licencia MIT</span>
+  <nav aria-label="Enlaces externos">
+    <a href="https://github.com/2026B-sof-jueg-gr1/robles-cristian-jueg-gr3">Repositorio</a>
+    <a href="operacion_supervivencia/">Jugar</a>
+    <a href="#alma">El alma</a>
+    <a href="#creditos">Créditos</a>
+  </nav>
+</footer>
+
 <script>
-const W=800,H=600;
-const C={bg:0x252c23,green:0x62724a,light:0xd5d9bd,red:0x9c4538};
-function txt(s,x,y,t,size=20,color='#f1f2e8',origin=.5){return s.add.text(x,y,t,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',color,align:'center'}).setOrigin(origin)}
-class Boot extends Phaser.Scene{
- constructor(){super('Boot')}
- create(){
-  let g=this.make.graphics({x:0,y:0,add:false});
-  // Soldado visto desde arriba: casco, uniforme y rifle.
-  g.fillStyle(0x7c8b5a);g.fillRoundedRect(-11,-12,22,25,5);
-  g.fillStyle(0x3e4934);g.fillCircle(0,-9,9);
-  g.fillStyle(0xb8b58b);g.fillCircle(0,-9,5);
-  g.fillStyle(0x242820);g.fillRect(8,-2,17,4);
-  g.fillStyle(0x3d4932);g.fillRect(-13,1,7,13);g.fillRect(6,1,7,13);
-  g.generateTexture('soldier',52,40);
-  g.clear();
-  // Zombi simple y legible desde arriba.
-  // Zombi con silueta humanoide: brazos, torso, cabeza y manchas de ropa.
-  g.fillStyle(0x59674b);g.fillRoundedRect(-9,-2,18,17,4); // torso
-  g.fillStyle(0x6f8460);g.fillRoundedRect(-15,-3,7,16,3); // brazo izquierdo
-  g.fillRoundedRect(8,-3,7,16,3); // brazo derecho
-  g.fillStyle(0x3c4637);g.fillRect(-8,11,6,7);g.fillRect(3,11,6,7); // piernas
-  g.fillStyle(0x82956f);g.fillCircle(0,-9,9); // cabeza
-  g.fillStyle(0x273126);g.fillCircle(-3,-10,2);g.fillCircle(4,-10,2);
-  g.fillStyle(0x8f4a3c);g.fillRect(-3,-5,7,3); // boca
-  g.fillStyle(0x9e5b4d);g.fillCircle(-8,2,2); // herida
-  g.generateTexture('zombie',36,40);
-  g.clear();g.fillStyle(0xffe3a0);g.fillRect(-3,-5,6,10);g.generateTexture('bullet',8,12);g.destroy();
-  this.scene.start('Menu');
- }}
-class Menu extends Phaser.Scene{
- constructor(){super('Menu')}
- create(){
-  drawGround(this);
-  txt(this,W/2,155,'OPERACIÓN SUPERVIVENCIA',34,'#d9e0c0');
-  txt(this,W/2,210,'ZONA DE CONTENCIÓN • SECTOR 04',15,'#d58b72');
-  txt(this,W/2,286,'Tu unidad quedó aislada.',23,'#f1f2e8');
-  txt(this,W/2,322,'Elimina a los infectados y mantente con vida.',16,'#c4cbbd');
-  let b=this.add.rectangle(W/2,410,250,56,0x394831).setStrokeStyle(2,0xc4d19b).setInteractive({useHandCursor:true});
-  txt(this,W/2,410,'INICIAR MISIÓN',19,'#f1f2e8');
-  b.on('pointerover',()=>b.setFillStyle(0x536445));b.on('pointerout',()=>b.setFillStyle(0x394831));
-  b.on('pointerdown',()=>this.scene.start('Game'));this.input.keyboard.once('keydown-ENTER',()=>this.scene.start('Game'));
-  txt(this,W/2,500,'WASD / FLECHAS  •  RATÓN PARA APUNTAR',13,'#aeb8a2');
- }}
-function drawGround(s){
- // Ciudad destruida: asfalto gris, edificios derrumbados, escombros y pequeños focos de fuego.
- s.add.rectangle(W/2,H/2,W,H,0x292b2d);
- const ground=s.add.graphics();
+(function () {
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
- // Manchas de ceniza y polvo sobre el asfalto
- for(let i=0;i<100;i++){
-   const x=Phaser.Math.Between(8,W-8), y=Phaser.Math.Between(8,H-8);
-   ground.fillStyle(Phaser.Utils.Array.GetRandom([0x343638,0x3d3e3e,0x202326,0x494744]),0.75);
-   ground.fillEllipse(x,y,Phaser.Math.Between(8,26),Phaser.Math.Between(4,13));
- }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
- // Calle central de asfalto gastado
- ground.fillStyle(0x414345,1);
- ground.fillPoints([
-   new Phaser.Geom.Point(280,0),new Phaser.Geom.Point(520,0),
-   new Phaser.Geom.Point(490,600),new Phaser.Geom.Point(250,600)
- ],true);
- ground.lineStyle(3,0x656666,0.7);
- ground.lineBetween(280,0,250,600); ground.lineBetween(520,0,490,600);
+  /* ---------- Secuencia de arranque de la terminal ---------- */
+  var LINES = [
+    { t: '> montando unidad de contención v0.4', c: 'lead' },
+    { t: '> enlace satelital ............. ', v: 'OK', c: 'ok' },
+    { t: '> sector 04 .................... ', v: 'AISLADO', c: 'bad' },
+    { t: '> operadores en turno .......... ', v: '1', c: 'warn' },
+    { t: '> refuerzos .................... ', v: 'NO DISPONIBLES', c: 'bad' },
+    { t: '> suministros médicos .......... ', v: 'NINGUNO', c: 'bad' },
+    { t: '> munición ..................... ', v: 'REGLAMENTARIA', c: 'ok' },
+    { t: '> amenaza ...................... ', v: 'ASCENDENTE', c: 'warn' },
+    { t: '' },
+    { t: '> el turno termina cuando tú terminas.', c: 'ok' }
+  ];
 
- // Grietas y marcas de la calle
- ground.lineStyle(2,0x252729,0.95);
- [[330,70,350,95],[420,140,395,170],[310,260,335,285],[440,360,415,390],
-  [350,460,330,490],[460,520,442,545],[375,200,360,218],[300,390,315,410]]
-  .forEach(a=>ground.lineBetween(a[0],a[1],a[2],a[3]));
+  var host = document.getElementById('boot');
+  if (!host) return;
 
- // Líneas de carril desgastadas
- ground.lineStyle(3,0xb0a77d,0.45);
- for(let y=30;y<600;y+=95) ground.lineBetween(397,y,393,y+35);
+  var caret = document.createElement('span');
+  caret.className = 'cursor';
 
- // Escombros dispersos, evitando cubrir demasiado la zona jugable
- for(let i=0;i<35;i++){
-   const x=Phaser.Math.Between(15,W-15), y=Phaser.Math.Between(65,H-15);
-   if(x>260&&x<515) continue;
-   ground.fillStyle(Phaser.Utils.Array.GetRandom([0x5b5a57,0x77716a,0x393b3d,0x8a8175]),1);
-   ground.fillPoints([
-     new Phaser.Geom.Point(x-Phaser.Math.Between(3,8),y-4),
-     new Phaser.Geom.Point(x+Phaser.Math.Between(4,10),y-2),
-     new Phaser.Geom.Point(x+5,y+Phaser.Math.Between(3,8)),
-     new Phaser.Geom.Point(x-4,y+5)
-   ],true);
- }
+  function fullHTML() {
+    return LINES.map(function (l) {
+      return esc(l.t) + (l.v ? '<span class="' + l.c + '">' + esc(l.v) + '</span>' : '');
+    }).join('\n');
+  }
 
- // Siluetas de edificios derrumbados en las esquinas y laterales
- const ruins = [
-   [55,95,95,72],[735,95,95,72],[65,520,110,82],[735,520,105,85],
-   [95,270,55,82],[710,290,62,95]
- ];
- ruins.forEach((a,i)=>{
-   s.add.rectangle(a[0]+4,a[1]+5,a[2],a[3],0x17191b,0.65).setDepth(1);
-   const b=s.add.rectangle(a[0],a[1],a[2],a[3],0x4a4947).setStrokeStyle(3,0x68635d).setDepth(1);
-   // bloques rotos y ventanas negras
-   s.add.rectangle(a[0]-a[2]*.18,a[1]-a[3]*.12,a[2]*.22,a[3]*.19,0x202326).setDepth(2);
-   s.add.rectangle(a[0]+a[2]*.2,a[1]+a[3]*.17,a[2]*.18,a[3]*.22,0x252729).setDepth(2);
-   s.add.rectangle(a[0]-a[2]*.28,a[1]+a[3]*.34,a[2]*.14,5,0x77716a).setDepth(2);
- });
+  function finish() {
+    host.innerHTML = fullHTML();
+    host.appendChild(caret);
+  }
 
- // Pequeños focos de fuego y brasas anaranjadas en zonas de ruinas
- [[155,115],[680,115],[120,495],[685,495],[65,320]].forEach((p,i)=>{
-   s.add.circle(p[0],p[1],17,0xe35d32,0.12).setDepth(2);
-   s.add.circle(p[0],p[1],9,0xf07836,0.3).setDepth(2);
-   const flame=s.add.triangle(p[0],p[1]-2,0,-13,-7,5,7,5,0xffa34a,0.9).setDepth(3);
-   s.tweens.add({targets:flame,scaleY:{from:0.8,to:1.15},alpha:{from:0.7,to:1},duration:Phaser.Math.Between(300,550),yoyo:true,repeat:-1});
- });
+  if (reduce) {
+    finish();
+  } else {
+    var li = 0, ci = 0, timer = null, acc = '';
 
- // Charcos oscuros y polvo
- for(let i=0;i<10;i++){
-   const x=Phaser.Math.Between(25,W-25),y=Phaser.Math.Between(70,H-15);
-   s.add.ellipse(x,y,Phaser.Math.Between(12,28),Phaser.Math.Between(5,11),0x191c1e,0.65).setDepth(1);
- }
-}
-class Game extends Phaser.Scene{
- constructor(){super('Game')}
- create(){
-  drawGround(this);this.score=0;this.lives=3;this.dead=false;this.lastShot=0;
-  // Barricadas/obstáculos del sector.
-  this.obstacles=this.physics.add.staticGroup();
-  [[150,155,88,30],[610,165,100,30],[250,430,108,30],[620,440,88,30]].forEach((a,i)=>{
-   // Barreras de hormigón roto con tonos grises para contrastar con los zombis.
-   this.add.rectangle(a[0]+3,a[1]+4,a[2],a[3],0x17191b,0.5).setDepth(1);
-   let r=this.add.rectangle(a[0],a[1],a[2],a[3],0x686764).setStrokeStyle(2,0x969087);
-   this.add.rectangle(a[0],a[1]-5,a[2]-10,7,0x8a857c).setDepth(2);
-   this.add.rectangle(a[0],a[1]+4,a[2]-8,7,0x4c4b49).setDepth(2);
-   this.physics.add.existing(r,true);this.obstacles.add(r);
+    function step() {
+      if (li >= LINES.length) return;
+      var line = LINES[li];
+      var plain = line.t + (line.v || '');
+
+      if (ci < plain.length) {
+        ci++;
+        host.innerHTML = acc + esc(plain.slice(0, ci));
+        host.appendChild(caret);
+        var ch = plain.charAt(ci - 1);
+        timer = window.setTimeout(step, ch === '.' ? 12 : 5);
+        return;
+      }
+
+      acc += (acc ? '\n' : '') + esc(line.t) +
+        (line.v ? '<span class="' + line.c + '">' + esc(line.v) + '</span>' : '');
+      host.innerHTML = acc;
+      host.appendChild(caret);
+      li++;
+      ci = 0;
+      timer = window.setTimeout(step, 85);
+    }
+
+    timer = window.setTimeout(step, 380);
+
+    // Clic en el panel = saltar la animación.
+    var term = document.querySelector('.term');
+    if (term) {
+      term.addEventListener('click', function () {
+        if (li >= LINES.length) return;
+        window.clearTimeout(timer);
+        li = LINES.length;
+        finish();
+      });
+    }
+  }
+
+  /* ---------- Copiar el YAML ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var src = document.getElementById(btn.getAttribute('data-copy'));
+      if (!src) return;
+      var text = src.textContent;
+      var prev = btn.textContent;
+      var done = function () {
+        btn.textContent = 'Copiado ✓';
+        window.setTimeout(function () { btn.textContent = prev; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {
+          btn.textContent = 'Selecciona y copia';
+        });
+      } else {
+        btn.textContent = 'Selecciona y copia';
+      }
+    });
   });
-  this.player=this.physics.add.image(W/2,H/2,'soldier').setCollideWorldBounds(true).setDepth(4);
-  this.player.setDamping(true).setDrag(0.88).setMaxVelocity(220);this.player.body.setSize(24,26);
-  this.zombies=this.physics.add.group();this.bullets=this.physics.add.group({maxSize:45});
-  this.physics.add.overlap(this.bullets,this.zombies,this.hitZombie,null,this);
-  this.physics.add.overlap(this.player,this.zombies,this.hitSoldier,null,this);
-  this.physics.add.collider(this.player,this.obstacles);
-  this.keys=this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
-  this.add.rectangle(W/2,27,W,54,0x171d17,.92).setDepth(10);
-  this.scoreLabel=txt(this,16,26,'ELIMINADOS: 0',16,'#d9e0c0',0).setDepth(11);
-  this.lifeLabel=txt(this,W-16,26,'SALUD: 3',16,'#e2a18b',1).setDepth(11);
-  this.time.addEvent({delay:1250,loop:true,callback:this.spawnZombie,callbackScope:this});
-  this.input.on('pointerdown',p=>{if(p.leftButtonDown())this.shoot(p)});
-  this.input.on('pointermove',p=>{if(p.isDown&&p.leftButtonDown())this.shoot(p)});
- }
- spawnZombie(){
-  if(this.dead)return;
-  let side=Phaser.Math.Between(0,3),x,y;
-  if(side===0){x=-15;y=Phaser.Math.Between(65,H)}else if(side===1){x=W+15;y=Phaser.Math.Between(65,H)}else if(side===2){x=Phaser.Math.Between(0,W);y=60}else{x=Phaser.Math.Between(0,W);y=H+15}
-  let z=this.zombies.create(x,y,'zombie');z.setDepth(3);z.setCircle(12);z.setData('speed',Phaser.Math.Between(42,67)+Math.min(this.score,150)*.08);
- }
- shoot(p){
-  if(this.dead||this.time.now-this.lastShot<260)return;this.lastShot=this.time.now;
-  let b=this.bullets.get(this.player.x,this.player.y,'bullet');if(!b)return;
-  b.enableBody(true,this.player.x,this.player.y,true,true);b.setActive(true).setVisible(true).setDepth(2);
-  let a=Phaser.Math.Angle.Between(this.player.x,this.player.y,p.worldX,p.worldY);
-  b.setRotation(a+Math.PI/2);this.physics.velocityFromRotation(a,480,b.body.velocity);
-  this.time.delayedCall(1000,()=>{if(b.active){this.bullets.killAndHide(b);b.body.enable=false}});
- }
- hitZombie(b,z){
-  if(!b.active||!z.active)return;this.bullets.killAndHide(b);b.body.enable=false;
-  this.zombies.killAndHide(z);z.body.enable=false;this.score++;
-  this.scoreLabel.setText('ELIMINADOS: '+this.score);
-  let puff=this.add.circle(z.x,z.y,4,0xc4d19b,.8).setDepth(5);
-  this.tweens.add({targets:puff,scale:3,alpha:0,duration:160,onComplete:()=>puff.destroy()});
- }
- hitSoldier(p,z){
-  if(this.dead||!z.active)return;this.zombies.killAndHide(z);z.body.enable=false;
-  this.lives--;this.lifeLabel.setText('SALUD: '+this.lives);this.cameras.main.shake(120,.005);
-  p.setTint(0xe2a18b);this.time.delayedCall(180,()=>{if(p.active)p.clearTint()});
-  if(this.lives<=0){this.dead=true;this.scene.start('End',{score:this.score})}
- }
- update(){
-  if(this.dead)return;let x=0,y=0;
-  if(this.keys.A.isDown||this.keys.LEFT.isDown)x--;if(this.keys.D.isDown||this.keys.RIGHT.isDown)x++;
-  if(this.keys.W.isDown||this.keys.UP.isDown)y--;if(this.keys.S.isDown||this.keys.DOWN.isDown)y++;
-  let v=new Phaser.Math.Vector2(x,y);if(v.length())v.normalize().scale(205);
-  this.player.setAcceleration(v.x*5,v.y*5);
-  this.player.rotation=Phaser.Math.Angle.Between(this.player.x,this.player.y,this.input.activePointer.worldX,this.input.activePointer.worldY)+Math.PI/2;
-  this.zombies.children.iterate(z=>{
-   if(!z||!z.active)return;let a=Phaser.Math.Angle.Between(z.x,z.y,this.player.x,this.player.y);
-   this.physics.velocityFromRotation(a,z.getData('speed'),z.body.velocity);
-   z.rotation=a;
-  });
-  this.bullets.children.iterate(b=>{if(b&&b.active&&(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20)){this.bullets.killAndHide(b);b.body.enable=false}});
- }
-}
-class End extends Phaser.Scene{
- constructor(){super('End')}init(d){this.score=d.score||0}
- create(){
-  drawGround(this);txt(this,W/2,185,'MISIÓN FALLIDA',38,'#d58b72');
-  txt(this,W/2,250,'INFECTADOS ELIMINADOS: '+this.score,22,'#d9e0c0');
-  txt(this,W/2,305,'La zona sigue en cuarentena.',17,'#c4cbbd');
-  let b=this.add.rectangle(W/2,390,260,56,0x394831).setStrokeStyle(2,0xc4d19b).setInteractive({useHandCursor:true});
-  txt(this,W/2,390,'REINTENTAR MISIÓN',18,'#f1f2e8');
-  b.on('pointerover',()=>b.setFillStyle(0x536445));b.on('pointerout',()=>b.setFillStyle(0x394831));
-  b.on('pointerdown',()=>this.scene.start('Game'));this.input.keyboard.once('keydown-ENTER',()=>this.scene.start('Game'));
-  txt(this,W/2,475,'ENTER PARA REINICIAR',13,'#aeb8a2');
- }}
-new Phaser.Game({type:Phaser.AUTO,width:W,height:H,parent:'game',backgroundColor:'#252c23',
- physics:{default:'arcade',arcade:{debug:false}},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[Boot,Menu,Game,End]});
-</script></body></html>
+
+  /* ---------- Revelado al hacer scroll ---------- */
+  var items = document.querySelectorAll('.rv');
+  if (!('IntersectionObserver' in window) || reduce) {
+    Array.prototype.forEach.call(items, function (el) { el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    Array.prototype.forEach.call(items, function (el) { io.observe(el); });
+  }
+
+  /* ---------- Año ---------- */
+  var y = document.getElementById('year');
+  if (y) y.textContent = new Date().getFullYear();
+})();
+</script>
+</body>
+</html>

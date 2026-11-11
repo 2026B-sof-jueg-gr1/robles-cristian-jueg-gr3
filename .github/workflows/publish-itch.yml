@@ -1,0 +1,74 @@
+# Publica el juego en itch.io con Butler cada vez que cambia el código.
+#
+# Requisitos (una sola vez):
+#   1. Tener creada la página del juego en itch.io (el "project" debe existir).
+#   2. Guardar tres secretos en Settings → Secrets and variables → Actions:
+#        BUTLER_CREDENTIALS  contenido de ~/.config/itch/butler_creds
+#        ITCH_USER           tu usuario de itch.io (ej. cristianrobles)
+#        ITCH_GAME           la URL del proyecto (ej. operacion-supervivencia)
+#
+# Si los secretos aún no existen, el workflow termina en verde con un aviso
+# en lugar de fallar: así el repositorio no acumula ejecuciones en rojo.
+#
+# A partir de ahí: push a main → build → publicado. Sin abrir la plataforma.
+
+name: Publicar en itch.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'operacion_supervivencia/**'
+      - '.github/workflows/publish-itch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: itch-publish
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    name: Empaquetar y subir
+    runs-on: ubuntu-latest
+    env:
+      BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+      ITCH_USER: ${{ secrets.ITCH_USER }}
+      ITCH_GAME: ${{ secrets.ITCH_GAME }}
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Comprobar los secretos
+        id: check
+        run: |
+          if [ -z "$BUTLER_CREDENTIALS" ] || [ -z "$ITCH_USER" ] || [ -z "$ITCH_GAME" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Publicación omitida::Faltan BUTLER_CREDENTIALS, ITCH_USER o ITCH_GAME. Añádelos en Settings → Secrets and variables → Actions."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Empaquetar el juego
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          cd operacion_supervivencia
+          zip -r ../build.zip . -x '*.md'
+          cd ..
+          echo "Contenido del paquete:"
+          unzip -l build.zip
+          echo "Tamaño: $(du -h build.zip | cut -f1)"
+
+      - name: Subir a itch.io con Butler
+        if: steps.check.outputs.configured == 'true'
+        uses: josephbmanley/butler-publish-itchio-action@master
+        env:
+          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+          CHANNEL: html
+          ITCH_USER: ${{ secrets.ITCH_USER }}
+          ITCH_GAME: ${{ secrets.ITCH_GAME }}
+          PACKAGE: build.zip
+          VERSION: ${{ github.run_number }}
