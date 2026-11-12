@@ -53,15 +53,26 @@ Live Server o dentro de un iframe en itch.io.
 
 ## Misión 1 — El alma del juego
 
-**Logline.** El turno de noche más largo de la historia: un operador de contención, armado con un
-rifle reglamentario y tres latidos de salud, debe sostener el Sector 04 hasta que llegue el relevo.
-El relevo no existe.
+**Logline.** Un virus convirtió la ciudad en una zona de contención. Un soldado perdió a su unidad
+durante la evacuación y perdió contacto con su mujer y su hija, que esperan en un refugio al otro
+extremo. Sin apoyo militar y con la munición contada, solo le queda una misión: llegar.
 
-**Resonancia ludonarrativa.** La mecánica principal no ilustra la historia: *es* la historia. Tres
-puntos de salud sin botiquines ni guardado convierten cada decisión en una decisión real, y obligan
-al jugador a leer el espacio antes de moverse. Lo que se aprende es procedimental —priorizar
-amenazas, gestionar un recurso escaso, decidir con información incompleta— y no se puede memorizar:
-solo se aprende jugando, fallando y repitiendo. Es el mismo bucle del desarrollo de software
+**La historia.** El gobierno declaró el estado de emergencia y levantó zonas de contención para que
+la infección no se extendiera. Durante una misión de evacuación, el protagonista —un soldado de una
+unidad militar— recibió el último mensaje de su esposa: ambas estaban en un refugio, al otro lado de
+la ciudad. Cuando logra salir de la zona infestada, descubre que su unidad ha sido prácticamente
+destruida. Decide continuar por su cuenta. Cada zombi es un obstáculo en el camino y cada segundo con
+vida es una oportunidad más de volver a verlas.
+
+**Resonancia ludonarrativa.** El juego no cuenta esa historia: la hace jugar. No hay mapa con una
+meta al final ni pantalla de victoria; hay una calle, una horda que no se acaba y tres puntos de vida.
+Esa ausencia de final no contradice la narrativa, la sostiene: la ciudad no se cruza en una tarde, se
+cruza en intentos. Cada partida es un tramo y cada muerte no es un *game over* sino el soldado
+levantándose un poco más lejos que la vez anterior. El juego no promete que llegues; promete que vas
+a intentarlo otra vez.
+
+**Qué enseña.** Aprendizaje procedimental, no memorizable: priorizar amenazas, administrar un recurso
+que no se recupera y decidir con información incompleta. Es el mismo bucle del desarrollo de software
 (observar → decidir → ejecutar → evaluar), con la diferencia de que aquí el *bug* te muerde.
 
 ---
