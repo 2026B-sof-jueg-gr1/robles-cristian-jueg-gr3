@@ -506,6 +506,28 @@ footer nav{display:flex;flex-wrap:wrap;gap:1.2rem}
 footer a{color:#8d9c83}
 footer a:hover{color:var(--amber)}
 
+/* --- Escenario a pantalla completa (solo cuando la página va embebida) --- */
+.stage{
+  position:fixed;inset:0;z-index:200;background:#0a0e0b;
+  display:flex;flex-direction:column;
+}
+.stage[hidden]{display:none}
+.stage-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.5rem 1rem;background:#080d09;border-bottom:1px solid var(--line);
+  font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);
+}
+.stage-bar div{display:flex;align-items:center;gap:.8rem}
+.stage-bar a{color:var(--sage);border-bottom:1px solid transparent}
+.stage-bar a:hover{border-color:var(--sage)}
+.stage-bar button{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--line);color:var(--bone);
+  padding:.35rem .7rem;cursor:pointer;transition:all .18s;
+}
+.stage-bar button:hover{background:var(--rust);border-color:var(--rust);color:#fff}
+.stage iframe{flex:1;width:100%;border:0;background:#151b17;display:block}
+
 /* --- Revelado al hacer scroll --- */
 .rv{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .rv.in{opacity:1;transform:none}
@@ -984,6 +1006,19 @@ footer a:hover{color:var(--amber)}
   </nav>
 </footer>
 
+<!-- Se usa solo si la página está embebida en una vista previa: ahí la
+     navegación a otra ruta puede quedar bloqueada por el anfitrión. -->
+<div class="stage" id="stage" hidden>
+  <div class="stage-bar">
+    <span>Sector 04 · Unidad de contención</span>
+    <div>
+      <a href="operacion_supervivencia/index.html" target="_blank" rel="noopener">Abrir aparte ↗</a>
+      <button type="button" id="stage-close">Cerrar ✕</button>
+    </div>
+  </div>
+  <iframe id="stage-frame" title="Operación Supervivencia" allow="autoplay; fullscreen"></iframe>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -1086,6 +1121,43 @@ footer a:hover{color:var(--amber)}
       }
     });
   });
+
+  /* ---------- Vista previa embebida ----------
+     Dentro de un iframe (paneles de vista previa del editor), la navegación a
+     otra ruta puede quedar bloqueada por el anfitrión: el clic no hace nada.
+     En ese caso abrimos el juego en una capa a pantalla completa. En un
+     navegador normal el enlace funciona como siempre. */
+  var embedded = false;
+  try { embedded = window.self !== window.top; } catch (e) { embedded = true; }
+
+  if (embedded) {
+    var GAME = 'operacion_supervivencia/index.html';
+    var stage = document.getElementById('stage');
+    var stageFrame = document.getElementById('stage-frame');
+
+    if (stage && stageFrame) {
+      var openStage = function (ev) {
+        if (ev) ev.preventDefault();
+        if (!stageFrame.getAttribute('src')) stageFrame.setAttribute('src', GAME);
+        stage.hidden = false;
+        document.body.style.overflow = 'hidden';
+      };
+      var closeStage = function () {
+        stage.hidden = true;
+        document.body.style.overflow = '';
+      };
+
+      Array.prototype.forEach.call(document.querySelectorAll('a[href="' + GAME + '"]'), function (a) {
+        if (a.closest && a.closest('#stage')) return;
+        a.addEventListener('click', openStage);
+      });
+
+      document.getElementById('stage-close').addEventListener('click', closeStage);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !stage.hidden) closeStage();
+      });
+    }
+  }
 
   /* ---------- Revelado al hacer scroll ---------- */
   var items = document.querySelectorAll('.rv');
